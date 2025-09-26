@@ -1,39 +1,239 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Musab Khalaf - X</title>
-
-  <!-- Open Graph / Facebook -->
-  <meta property="og:title" content="Musab Khalaf - Portfolio" />
-  <meta property="og:description" content="Official portfolio of Musab Khalaf. Web developer & designer." />
-  <meta property="og:image" content="images/profile.png" />
-  <meta property="og:url" content="https://musabkhalaf.github.io/" />
-  <meta property="og:type" content="website" />
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Musab Khalaf - Portfolio" />
-  <meta name="twitter:description" content="Official portfolio of Musab Khalaf. Web developer & designer." />
-  <meta name="twitter:image" content="images/profile.png" />
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>نظام الدعوات - متصل بـ Firebase</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    :root{ --primary:#6c5ce7; --primary-dark:#5a4dcf; --good:#27ae60; --bad:#e74c3c; --muted:#666; }
+    body{font-family: "Cairo", Arial, sans-serif; background:#f0f2f5; margin:0; padding:16px; direction:rtl;color:#222;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;background:linear-gradient(90deg,var(--primary),#6dd5fa);color:white;padding:12px;border-radius:10px;margin-bottom:12px;}
+    header .brand{display:flex;align-items:center;gap:12px;}
+    header img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.18);}
+    header .profile-info{display:flex;flex-direction:column;align-items:flex-end;}
+    .container{max-width:980px;margin:0 auto;}
+    .card{background:white;padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06);margin-bottom:12px;}
+    label{display:block;margin-bottom:6px;font-weight:600;}
+    input,select{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;margin-bottom:8px;}
+    button{padding:8px 12px;border-radius:8px;border:none;background:var(--primary);color:white;cursor:pointer;}
+    button.secondary{background:#ccc;color:#222;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{border:1px solid #eee;padding:8px;text-align:center;font-size:14px;}
+    th{background:#fafafa;}
+    .hidden{display:none;}
+    .small-muted{color:var(--muted);font-size:13px;}
+    .balance-badge{background:gold;color:#222;padding:6px 12px;border-radius:20px;font-weight:700;}
+    @media (max-width:720px){ header{flex-direction:column;align-items:flex-start;} }
+  </style>
+  <!-- مكتبة بصمة الجهاز -->
+  <script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
+</head>
+<body>
+  <div class="container">
 
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f1113;
-      color: white;
-    }
+    <!-- HEADER -->
+    <header id="topBar" class="hidden">
+      <div class="brand">
+        <h2 style="margin:0">🎁 نظام الدعوات</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img id="topProfileImg" src="https://i.imgur.com/placeholder.png" alt="profile">
+        <div class="profile-info">
+          <strong id="topProfileName">مستخدم</strong>
+          <div class="small-muted">كود: <span id="topProfileCode">------</span></div>
+        </div>
+        <div class="balance-badge">الرصيد: <span id="displayBalance">0.00</span>$</div>
+      </div>
+    </header>
 
-    header {
-      display: flex;
-      flex-wrap: wrap;
+    <!-- AUTH CARD -->
+    <div id="authCard" class="card">
+      <h3>تسجيل الدخول / إنشاء حساب</h3>
+      <label>البريد الإلكتروني</label>
+      <input id="loginEmail" type="email" placeholder="email@example.com">
+      <label>كلمة المرور</label>
+      <input id="loginPassword" type="password" placeholder="********">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" id="loginBtn">تسجيل الدخول</button>
+        <button type="button" id="signupBtn" class="secondary">إنشاء حساب جديد</button>
+      </div>
+      <p class="small-muted" style="margin-top:8px">ملاحظة: فعّل Email/Password في Firebase Console إذا لم يكن مفعلًا.</p>
+    </div>
+
+    <!-- USER PANEL: الدعوات -->
+    <div id="userCard" class="card hidden">
+      <h3>الدعوات وكسب النقاط</h3>
+      <div>
+        <label>رابط الدعوة الخاص بك:</label>
+        <input id="myInviteLink" type="text" readonly style="direction:ltr;width:90%;margin-bottom:8px;">
+        <button type="button" id="copyInviteBtn">نسخ الرابط</button>
+      </div>
+      <div style="margin-top:16px;">
+        <strong>عدد الدعوات الناجحة: <span id="inviteCount">0</span></strong>
+      </div>
+      <div style="margin-top:12px;">
+        <ul id="inviteList"></ul>
+      </div>
+      <p class="small-muted">عندما يسجل شخص جديد عبر رابطك، تحصل على نقاط تلقائياً! لا يمكن لنفس الجهاز قبول أكثر من دعوة واحدة فقط.</p>
+    </div>
+
+  </div>
+
+  <!-- Firebase modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, collection, updateDoc, query, where, onSnapshot, getDocs, getDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+      apiKey: "AIzaSyDPcyxpHRuLx9T2CO4LJ-n9jaqAynUjvqw",
+      authDomain: "xix5-a119a.firebaseapp.com",
+      projectId: "xix5-a119a",
+      storageBucket: "xix5-a119a.appspot.com",
+      messagingSenderId: "332265425367",
+      appId: "1:332265425367:web:0a95e71d8bd0058503a392",
+      measurementId: "G-RLK4PXMV7P"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM elements
+    const topBar = document.getElementById("topBar");
+    const topProfileImg = document.getElementById("topProfileImg");
+    const topProfileName = document.getElementById("topProfileName");
+    const topProfileCode = document.getElementById("topProfileCode");
+    const displayBalance = document.getElementById("displayBalance");
+
+    const authCard = document.getElementById("authCard");
+    const userCard = document.getElementById("userCard");
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const loginEmailInput = document.getElementById("loginEmail");
+    const loginPasswordInput = document.getElementById("loginPassword");
+
+    // دعوات
+    const myInviteLink = document.getElementById("myInviteLink");
+    const copyInviteBtn = document.getElementById("copyInviteBtn");
+    const inviteCount = document.getElementById("inviteCount");
+    const inviteList = document.getElementById("inviteList");
+
+    // fingerprintjs
+    let deviceFingerprint = "";
+    window.FingerprintJS.load().then(fp => {
+      fp.get().then(res => { deviceFingerprint = res.visitorId; });
+    });
+
+    // تسجيل الدخول
+    loginBtn.addEventListener("click", async () => {
+      const email = loginEmailInput.value.trim();
+      const pass = loginPasswordInput.value;
+      if(!email || !pass){ alert("أدخل البريد وكلمة المرور."); return; }
+      try{
+        await signInWithEmailAndPassword(auth,email,pass);
+      } catch(e){ alert("خطأ تسجيل الدخول: "+e.message); }
+    });
+
+    // تسجيل حساب جديد مع منطق الدعوة
+    signupBtn.addEventListener("click", async () => {
+      const email = loginEmailInput.value.trim();
+      const pass = loginPasswordInput.value;
+      if(!email || !pass){ alert("أدخل البريد وكلمة المرور لإنشاء الحساب."); return; }
+      // تحقق من ref
+      const params = new URLSearchParams(window.location.search);
+      const refCode = params.get("ref");
+      try {
+        // البحث عن الداعي بالكود
+        let inviterId = "";
+        if (refCode) {
+          const q = query(collection(db, "users"), where("code", "==", refCode));
+          const snap = await getDocs(q);
+          if (!snap.empty) inviterId = snap.docs[0].id;
+        }
+        // منع قبول دعوة أكثر من مرة بنفس الجهاز
+        if(inviterId){
+          const usersWithDevice = query(collection(db, "users"), where("inviteDeviceId", "==", deviceFingerprint));
+          const r = await getDocs(usersWithDevice);
+          if(!r.empty){
+            alert("لا يمكنك قبول دعوة مرتين من نفس الجهاز!");
+            return;
+          }
+        }
+        const cred = await createUserWithEmailAndPassword(auth,email,pass);
+        const uid = cred.user.uid;
+        const code = generateCode();
+        await setDoc(doc(db,"users",uid),{
+          email,
+          name:"مستخدم جديد",
+          balance:0.00,
+          photoURL:"https://i.imgur.com/placeholder.png",
+          code,
+          createdAt: serverTimestamp(),
+          inviterId: inviterId || "",
+          inviteDeviceId: inviterId ? deviceFingerprint : ""
+        });
+        // زيادة نقاط الداعي إذا وجد
+        if(inviterId){
+          const inviterRef = doc(db, "users", inviterId);
+          await updateDoc(inviterRef, { balance: increment(0.03) }); // غيّر عدد النقاط حسب رغبتك
+        }
+        alert("تم إنشاء الحساب بنجاح.");
+      }catch(e){ alert("خطأ أثناء إنشاء الحساب: "+e.message); }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if(user){
+        authCard.classList.add("hidden");
+        topBar.classList.remove("hidden");
+        userCard.classList.remove("hidden");
+
+        const userRef = doc(db, "users", user.uid);
+        onSnapshot(userRef, snap => {
+          if(snap.exists()){
+            const data = snap.data();
+            topProfileImg.src = data.photoURL || "https://i.imgur.com/placeholder.png";
+            topProfileName.textContent = data.name || user.email;
+            topProfileCode.textContent = data.code || "------";
+            displayBalance.textContent = (Number(data.balance)||0).toFixed(2);
+          }
+        });
+
+        // === رابط الدعوة الخاص ===
+        let userSnap = await getDoc(userRef);
+        let data = userSnap.data();
+        let myCode = data && data.code ? data.code : generateCode();
+        if(!data.code) await setDoc(userRef, { code: myCode }, { merge: true });
+        // هنا الربط يكون دومًا لموقعك الأساسي
+        const inviteURL = "https://xtx3.github.io/x123/?ref=" + myCode;
+        myInviteLink.value = inviteURL;
+        copyInviteBtn.onclick = function () {
+          navigator.clipboard.writeText(inviteURL);
+          alert("تم نسخ الرابط!");
+        };
+
+        // === حساب المدعوين ===
+        const invitedQ = query(collection(db, "users"), where("inviterId", "==", user.uid));
+        onSnapshot(invitedQ, res => {
+          inviteCount.textContent = res.size;
+          inviteList.innerHTML = "";
+          res.forEach(uDoc => {
+            const name = uDoc.data().name || uDoc.data().email || "مستخدم جديد";
+            inviteList.innerHTML += `<li>${name}</li>`;
+          });
+        });
+
+      } else {
+        authCard.classList.remove("hidden");
+        userCard.classList.add("hidden");
+        topBar.classList.add("hidden");
+      }
+    });
+
+    function generateCode(){ const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let code=""; for(let i=0;i<8;i++) code+=chars.charAt(Math.floor(Math.random()*chars.length)); return code; }
+
+  </script>
+</body>
+</html>
       justify-content: space-between;
       align-items: center;
       padding: 20px 10%;
